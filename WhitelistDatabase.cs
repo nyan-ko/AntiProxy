@@ -18,7 +18,8 @@ namespace AntiProxy
             _db = db;
 
             var table = new SqlTable("AntiProxyWhitelists",
-                new SqlColumn("IP", MySqlDbType.String, 16) { Primary = true });
+                new SqlColumn("IP", MySqlDbType.String, 16) { Primary = true },
+                new SqlColumn("AssociatedName", MySqlDbType.Text, 40));
 
             var ctor = new SqlTableCreator(db,
                 db.GetSqlType() == SqlType.Mysql
@@ -36,7 +37,7 @@ namespace AntiProxy
             }
         }
 
-        public bool TryAddWhitelist(string ip)
+        public bool TryAddWhitelist(string ip, string name)
         {
             try
             {
@@ -46,7 +47,7 @@ namespace AntiProxy
                 }
                 else
                 {
-                    return _db.Query("INSERT INTO AntiProxyWhitelists (IP) VALUES (@0);", ip) == 1;
+                    return _db.Query("INSERT INTO AntiProxyWhitelists (IP, AssociatedName) VALUES (@0, @1)", ip, name) == 1;
                 }
             }
             catch(Exception ex)
@@ -66,7 +67,7 @@ namespace AntiProxy
                 }
                 else
                 {
-                    return _db.Query("DELETE FROM AntiProxyWhitelist WHERE IP=@0", ip) == 1;
+                    return _db.Query("DELETE FROM AntiProxyWhitelists WHERE IP=@0", ip) == 1;
                 }
             }
             catch(Exception ex)
@@ -76,9 +77,9 @@ namespace AntiProxy
             }
         }
 
-        public IEnumerable<string> GetAllWhitelists()
+        public IEnumerable<Whitelist> GetAllWhitelists()
         {
-            List<string> ips = new List<string>();
+            List<Whitelist> ips = new List<Whitelist>();
 
             try
             {
@@ -86,7 +87,7 @@ namespace AntiProxy
                 {
                     while (reader.Read())
                     {
-                        ips.Add(reader.Get<string>("IP"));
+                        ips.Add(new Whitelist(reader.Get<string>("IP"), reader.Get<string>("AssociatedName")));
                     }
 
                     return ips;
@@ -97,6 +98,23 @@ namespace AntiProxy
                 TShock.Log.ConsoleError(ex.ToString());
                 return null;
             }
+        }
+    }
+
+    public class Whitelist
+    {
+        public string IP { get; private set; }
+        public string AssociatedName { get; private set; }
+
+        public Whitelist(string ip, string associatedName)
+        {
+            IP = ip;
+            AssociatedName = associatedName;
+        }
+
+        public override string ToString()
+        {
+            return IP + " - \"" + AssociatedName + "\"";
         }
     }
 }

@@ -104,9 +104,10 @@ namespace AntiProxy
                 {
                     var help = new List<string>()
                     {
-                        "Usage: add -e/-n",
+                        "Usage: add -e/-n <associated name>",
                         "-e - Adds an encoded IP (e.g. A3-4D-8C-14)",
-                        "-n - Adds a normal IP (e.g. 127.0.0.1)"
+                        "-n - Adds a normal IP (e.g. 127.0.0.1)",
+                        "Associated name is optional with a 40 character limit."
                     };
 
                     if (args.Parameters.Count < 3)
@@ -116,6 +117,7 @@ namespace AntiProxy
                     else
                     {
                         string ip = args.Parameters[2];
+                        string name = "";
 
                         if (args.Parameters[1] == "-e")
                         {
@@ -126,17 +128,22 @@ namespace AntiProxy
                             info("Subcommand for whitelisting an ip.", help);
                         }
 
+                        if (args.Parameters.Count > 3)
+                        {
+                            name = string.Join(" ", args.Parameters.Skip(3));
+                        }
+
                         if (!IPAddress.TryParse(ip, out IPAddress unused))
                         {
                             p.SendErrorMessage($"Could not parse {ip} as an ip.");
                         }
-                        if (!Database.TryAddWhitelist(ip))
+                        if (!Database.TryAddWhitelist(ip, name))
                         {
                             p.SendErrorMessage("Could not complete database query.");
                         }
                         else
                         {
-                            p.SendSuccessMessage($"Successfully whitelisted {ip}.");
+                            p.SendSuccessMessage($"Successfully whitelisted {ip} with " + (name == "" ? "no associated name." : $"associated name \"{name}\"."));
                         }
                     }
                 }
