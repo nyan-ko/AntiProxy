@@ -1,14 +1,14 @@
 ﻿using AntiProxy.Enums;
-using System.Diagnostics;
-using System.IO;
-using System.Collections.Generic;
 using System;
-using Terraria;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Net;
+using Terraria;
 using Terraria.Localization;
 using TerrariaApi.Server;
-using System.Linq;
-using System.Globalization;
 using TShockAPI;
 
 namespace AntiProxy

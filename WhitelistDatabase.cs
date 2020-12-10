@@ -1,11 +1,9 @@
-﻿using System.Data;
-using System.Data.Sql;
-using TShockAPI;
-using System.Data.Common;
-using MySql.Data.MySqlClient;
+﻿using MySql.Data.MySqlClient;
 using System;
-using TShockAPI.DB;
 using System.Collections.Generic;
+using System.Data;
+using TShockAPI;
+using TShockAPI.DB;
 
 namespace AntiProxy
 {

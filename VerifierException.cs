@@ -1,5 +1,5 @@
-﻿using System;
-using AntiProxy.Enums;
+﻿using AntiProxy.Enums;
+using System;
 
 namespace AntiProxy
 {
