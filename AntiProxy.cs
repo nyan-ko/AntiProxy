@@ -6,6 +6,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Timers;
+using System.Threading.Tasks;
 using Terraria;
 using Terraria.Localization;
 using TerrariaApi.Server;
@@ -16,13 +18,15 @@ namespace AntiProxy
     [ApiVersion(2, 1)]
     public class AntiProxy : TerrariaPlugin
     {
-        public static readonly string EmailTxt = Path.Combine(TShock.SavePath, "antiproxy-email.txt");
-
         public override string Name => "AntiProxy";
         public override string Author => "nyan";
 
         public Verifier Verifier { get; private set; }
         public WhitelistDatabase Database { get; private set; }
+        public Config Config { get; private set; }
+
+        private Timer _connectionThrottler;
+        private bool _allowConnection;
 
         public AntiProxy(Main game) : base(game)
         {
@@ -31,23 +35,29 @@ namespace AntiProxy
 
         public override void Initialize()
         {
-            string email;
-            if (File.Exists(EmailTxt))
+            Config = Config.Read();
+
+            if (Config.ContactEmail != "<VALID_EMAIL_HERE>")
             {
-                email = File.ReadAllText(EmailTxt);
-                TShock.Log.ConsoleInfo($"[AntiProxy] Using email \"{email}\"");
+                TShock.Log.ConsoleInfo($"[AntiProxy] Using email \"{Config.ContactEmail}\"");
             }
             else
             {
-                File.WriteAllText(EmailTxt, "<VALID_EMAIL_HERE>");
-                TShock.Log.ConsoleError($"AntiProxy could not find a stored email. A placeholder has been created at {EmailTxt}, however AntiProxy will not run for this server instance.");
+                TShock.Log.ConsoleError($"[AntiProxy] Detected placeholder email being used, will not run for this server insance. Please edit the AntiProxy config.");
                 return;
             }
 
             Commands.ChatCommands.Add(new Command("antiproxy.admin", APCommand, "apwhitelist", "apwl"));
 
-            Verifier = new Verifier(email);
+            Verifier = new Verifier(Config.ContactEmail);
             Database = new WhitelistDatabase(TShock.DB);
+
+            // getipintel.net does not want more than 15 requests per minute (i.e. 1 per 4 seconds) so this timer
+            // should allow us to stay safely under that threshold.
+            _connectionThrottler = new Timer(4250); 
+            _connectionThrottler.Elapsed += AllowNewConnection;
+            _connectionThrottler.AutoReset = true;
+            _connectionThrottler.Enabled = true;
 
             ServerApi.Hooks.ServerJoin.Register(this, OnJoin);
         }
@@ -55,10 +65,25 @@ namespace AntiProxy
         private async void OnJoin(JoinEventArgs args)
         {
             var client = Netplay.Clients[args.Who];
-            string addr = client.Socket.GetRemoteAddress().ToString().ToString();
-            string ip = addr.Substring(0, addr.IndexOf(':'));
+            string addr = client.Socket.GetRemoteAddress().ToString();
+            string ip = addr.Substring(0, addr.IndexOf(':'));  // GetRemoteAddress() by itself includes the port which needs to be cut off
+
+            // banned users connecting are already handled by tshock so their ips will never be checked
+            if (!Config.CheckRegisteredForProxy && TShock.UserAccounts.GetUserAccountByName(client.Name) != null)
+            {
+                return;
+            }
+
+            // wait until a new request can be made to getipintel.net
+            while (!_allowConnection)
+            {
+                await Task.Delay(100);
+            }
+
             RiskType risk = await Verifier.GetProxyRiskAsync(ip);
 
+            // kick medium risk ips, ban high (i.e. guaranteed proxy) ips
+            // include their encoded ip in case it's a false positive
             if (risk != RiskType.Low)
             {
                 if (Database.IsWhitelisted(ip))
@@ -69,6 +94,11 @@ namespace AntiProxy
                 }
                 TShock.Log.ConsoleInfo($"Risk: {risk} for IP: {ip}");
                 TShock.Log.Write($"Risk: {risk} for IP: {ip}", TraceLevel.Info);
+
+                if (risk == RiskType.High)
+                {
+                    TShock.Bans.AddBan(ip, client.Name, client.ClientUUID, "", "High risk of proxy.");
+                }
 
                 client.PendingTermination = true;
                 //client.PendingTerminationApproved = true;
@@ -208,6 +238,11 @@ namespace AntiProxy
                 }
                     break;
             }
+        }
+
+        private void AllowNewConnection(object source, ElapsedEventArgs args)
+        {
+            _allowConnection = true;
         }
 
         public static string EncodeIP(string ip)

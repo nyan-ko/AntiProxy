@@ -37,6 +37,10 @@
     <Reference Include="MySql.Data">
       <HintPath>..\..\..\Desktop\terraria backup\1.4\1.4.0.5\tshock stuff\TShock4.4.0_Pre11_Terraria1.4.0.5\MySql.Data.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Desktop\terraria backup\1.4\1.4.0.5\tshock stuff\TShock4.4.0_Pre11_Terraria1.4.0.5\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="OTAPI">
       <HintPath>..\TerrariaAPI-Server-general-devel\TShock.Modifications.Bootstrapper\bin\Debug\Output\OTAPI.dll</HintPath>
       <Private>False</Private>
@@ -60,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AntiProxy.cs" />
+    <Compile Include="Config.cs" />
     <Compile Include="Enums\ErrorCode.cs" />
     <Compile Include="Enums\VerifierFlags.cs" />
     <Compile Include="VerifierException.cs" />
