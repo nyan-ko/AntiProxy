@@ -63,6 +63,14 @@ namespace AntiProxy
             ServerApi.Hooks.ServerJoin.Register(this, OnJoin);
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Config.Write();
+            }
+        }
+
         private async void OnJoin(JoinEventArgs args)
         {
             var client = Netplay.Clients[args.Who];
