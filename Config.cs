@@ -34,7 +34,7 @@ namespace AntiProxy
             }
             else
             {
-                cfg = JsonConvert.DeserializeObject<Config>(FilePath);
+                cfg = JsonConvert.DeserializeObject<Config>(File.ReadAllText(FilePath));
                 return cfg;
             }
         }
