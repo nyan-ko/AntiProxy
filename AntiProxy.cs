@@ -30,7 +30,7 @@ namespace AntiProxy
 
         public AntiProxy(Main game) : base(game)
         {
-            Order = 0;
+            Order = 1;
         }
 
         public override void Initialize()
@@ -77,10 +77,21 @@ namespace AntiProxy
             string addr = client.Socket.GetRemoteAddress().ToString();
             string ip = addr.Substring(0, addr.IndexOf(':'));  // GetRemoteAddress() by itself includes the port which needs to be cut off
 
-            // banned users connecting are already handled by tshock so their ips will never be checked
-            if (!Config.CheckRegisteredForProxy && TShock.UserAccounts.GetUserAccountByName(client.Name) != null)
+            // dont bother taking up a request if the user is already banned, or if theyre already registered
+            if (TShock.Bans.GetBanByIp(ip) != null)
             {
+                TShock.Log.ConsoleInfo($"Did not check banned user {client.Name} for proxy risk.");
                 return;
+            }
+            else 
+            {
+                // vulnerable to uuid and name spoofing but thats why the toggle exists :D
+                var uuid = TShock.UserAccounts.GetUserAccountByName(client.Name)?.UUID ?? "";
+                if (!Config.CheckRegisteredForProxy && uuid == client.ClientUUID) 
+                {
+                    TShock.Log.ConsoleInfo($"Did not check registered user {client.Name} for proxy risk.");
+                    return;
+                }
             }
 
             // wait until a new request can be made to getipintel.net
@@ -88,6 +99,8 @@ namespace AntiProxy
             {
                 await Task.Delay(100);
             }
+
+            _allowConnection = false;
 
             RiskType risk = await Verifier.GetProxyRiskAsync(ip);
 
@@ -106,12 +119,12 @@ namespace AntiProxy
 
                 if (risk == RiskType.High)
                 {
-                    TShock.Bans.AddBan(ip, client.Name, client.ClientUUID, "", "High risk of proxy.");
+                    TShock.Bans.AddBan(ip, client.Name, client.ClientUUID, "", $"High risk of proxy. Contact server admins if you have questions; your code is {EncodeIP(ip)}.");
                 }
 
                 client.PendingTermination = true;
-                //client.PendingTerminationApproved = true;
                 NetMessage.SendData((int)PacketTypes.Disconnect, args.Who, -1, NetworkText.FromLiteral($"Disconnected: possible proxy. Contact server admins if you have questions; your code is {EncodeIP(ip)}."));
+
                 args.Handled = true;
             }
         }
