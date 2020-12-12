@@ -47,7 +47,8 @@ namespace AntiProxy
                 return;
             }
 
-            Commands.ChatCommands.Add(new Command("antiproxy.admin", APCommand, "apwhitelist", "apwl"));
+            Commands.ChatCommands.Add(new Command("antiproxy.admin", WhitelistCmd, "apwhitelist", "apwl"));
+            Commands.ChatCommands.Add(new Command("antiproxy.config", ToggleRegisterUserCheck, "apcheck"));
 
             Verifier = new Verifier(Config.ContactEmail);
             Database = new WhitelistDatabase(TShock.DB);
@@ -107,7 +108,7 @@ namespace AntiProxy
             }
         }
 
-        private void APCommand(CommandArgs args)
+        private void WhitelistCmd(CommandArgs args)
         {
             var p = args.Player;
 
@@ -238,6 +239,12 @@ namespace AntiProxy
                 }
                     break;
             }
+        }
+
+        private void ToggleRegisterUserCheck(CommandArgs args)
+        {
+            Config.CheckRegisteredForProxy = !Config.CheckRegisteredForProxy;
+            args.Player.SendSuccessMessage($"[AntiProxy] Registered user IPs will {(Config.CheckRegisteredForProxy ? "no longer" : "now")} be checked for proxy risk.");
         }
 
         private void AllowNewConnection(object source, ElapsedEventArgs args)
